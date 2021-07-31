@@ -5,16 +5,20 @@ extends Node2D
 
 var rng = RandomNumberGenerator.new()
 var rooms = []
+var players = []
 var player_room = -1
+var player_colors = [Color.aqua, Color.brown, Color.coral, Color.deeppink]
+var room_script = preload("res://sources/Room.gd")
 
 # https://godotengine.org/qa/75793/how-do-i-generate-a-polygon2d-from-within-a-script
-func draw_rectangle(x, y, width, height, color):
+func make_room(x, y, width, height, color):
 	var area = Area2D.new()
 	area.position = Vector2(x, y)
 	var room_id = rooms.size()
 	area.connect("input_event", self, "on_room_input_event", [room_id])
-
+	
 	var poly = Polygon2D.new()
+	poly.set_script(room_script)
 	var x1 = 0
 	var y1 = 0
 	poly.set_polygon(PoolVector2Array([
@@ -41,7 +45,7 @@ func mondrian(x, y, width, height, iter):
 		var r = rng.randf_range(0.0, 1.0)
 		var g = rng.randf_range(0.0, 1.0)
 		var b = rng.randf_range(0.0, 1.0)
-		draw_rectangle(x, y, width, height, Color(r, g, b))
+		make_room(x, y, width, height, Color(r, g, b))
 	else:
 		var k = rng.randi_range(1, 4) / 5.0
 		if width > height:
@@ -54,14 +58,15 @@ func mondrian(x, y, width, height, iter):
 func random_room_id():
 	return rng.randi_range(0, rooms.size() - 1)
 
-func place_player(room_id):
+func place_player(player, room_id):
 	var random_room = rooms[room_id]
 	var x = random_room.get_parent().position.x
 	var y = random_room.get_parent().position.y
 	var w = random_room.polygon[2].x
 	var h = random_room.polygon[2].y
-	$Player.set_position(Vector2(x + w / 2.0, y + h / 2.0))
-	player_room = room_id
+	player.set_position(Vector2(x + w / 2.0, y + h / 2.0))
+	player.room_id = room_id
+	random_room.player_id = player.id
 
 func get_player_room():
 	return rooms[player_room]
@@ -113,28 +118,69 @@ func find_adjacent_rooms(room_id):
 
 var highlight_rooms = []
 
+func create_level():
+	mondrian(0, 0, 1920, 1080, 6)
+
+func _find(arr: Array, f: FuncRef):
+	for v in arr:
+		if f.call_func(v):
+			return true
+	return false
+	
+func _lambda_player_in_room(a):
+	return a.player_id != -1
+
+func find_empty_room():
+	var room_id = -1
+	while room_id == -1:
+		room_id = random_room_id()
+		var player_in_room = _find(rooms, funcref(self, "_lambda_player_in_room"))
+		if player_in_room:
+			room_id = -1
+	return room_id
+
 func _ready():
 	rng.randomize()
-	mondrian(0, 0, 1920, 1080, 6)
-	var room_id = random_room_id()
-	place_player(room_id)
-	highlight_rooms = find_next_turn_rooms(room_id, 2)
+	create_level()
+	
+	var n_foes = 3
+	for i in range(3):
+		var foe = $Player.duplicate()
+		foe.id = i + 1
+		foe.modulate = player_colors[i + 1]
+		$Foes.add_child(foe)
+		var room_id = find_empty_room()
+		place_player(foe, room_id)
+	
+	$Player.id = 0
+	$Player.modulate = player_colors[0]
+	var room_id = find_empty_room()
+	place_player($Player, room_id)
+	update_highlight_rooms(room_id)
 
 var highlight_time = 0
 var max_highlight_time = 4.0
 
-func _process(delta):
-	if highlight_rooms.empty():
-		return
-
-	highlight_time += delta
-	
+func update_highlight_rooms(room_id):
+	highlight_rooms = find_next_turn_rooms(room_id, 2)
+	for room in rooms:
+		room.set_outline_color(Color(0.0, 0.0, 0.0))
 	for room in highlight_rooms:
-		var k = lerp(0.4, 0.8, sin(PI * highlight_time / max_highlight_time))
-		room.modulate = Color(k, k, k)
+		room.set_outline_color(Color(1.0, 1.0, 1.0))
 
-	if highlight_time >= max_highlight_time:
-		highlight_time = 0
+func _process(delta):
+#	if highlight_rooms.empty():
+#		return
+#
+#	highlight_time += delta
+#
+#	for room in highlight_rooms:
+#		var k = lerp(0.4, 0.8, sin(PI * highlight_time / max_highlight_time))
+#		room.modulate = Color(k, k, k)
+#
+#	if highlight_time >= max_highlight_time:
+#		highlight_time = 0
+	pass
 
 
 func on_player_input_event(viewport, event, shape_idx):
@@ -151,8 +197,8 @@ func on_room_input_event(viewport, event, shape_idx, room_id):
 			var room = rooms[room_id]
 			
 			if highlight_rooms.find(room) != -1:
-				place_player(room_id)
-				highlight_rooms = find_next_turn_rooms(room_id, 2)
+				place_player($Player, room_id)
+				update_highlight_rooms(room_id)
 
 #			var master_left = master_room.get_parent().position.x
 #			var master_top = master_room.get_parent().position.y
