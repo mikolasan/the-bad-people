@@ -4,11 +4,15 @@ extends Node2D
 # https://scratch.mit.edu/projects/115945709/editor/
 
 var rng = RandomNumberGenerator.new()
-var rooms = []
+var rooms: Array = [] # array of Room (Polygon2D)
 var players = []
 var player_room = -1
 var player_colors = [Color.aqua, Color.brown, Color.coral, Color.deeppink]
 var room_script = preload("res://sources/Room.gd")
+const player_info = Global.player_info
+var player_names = player_info.keys()
+var current_player = 0
+var player_name
 
 # https://godotengine.org/qa/75793/how-do-i-generate-a-polygon2d-from-within-a-script
 func make_room(x, y, width, height, color):
@@ -131,13 +135,21 @@ func _lambda_player_in_room(a):
 	return a.player_id != -1
 
 func find_empty_room():
-	var room_id = -1
-	while room_id == -1:
-		room_id = random_room_id()
-		var player_in_room = _find(rooms, funcref(self, "_lambda_player_in_room"))
-		if player_in_room:
-			room_id = -1
-	return room_id
+	var room_ids = []
+	for i in range(rooms.size()):
+		var player_id = rooms[i].player_id
+		if player_id == -1:
+			room_ids.append(i)
+	
+	var r = rng.randi_range(0, room_ids.size() - 1)
+	return room_ids[r]
+#	var room_id = -1
+#	while room_id == -1:
+#		room_id = random_room_id()
+#		var player_in_room = _find(rooms, funcref(self, "_lambda_player_in_room"))
+#		if player_in_room:
+#			room_id = -1
+#	return room_id
 
 func _ready():
 	rng.randomize()
@@ -188,13 +200,20 @@ func on_player_input_event(viewport, event, shape_idx):
 		if event.button_index == BUTTON_LEFT:
 			print("Clicked")
 
+var card_position = Vector2()
+var card_name
+
 func on_room_input_event(viewport, event, shape_idx, room_id):
-	if event is InputEventMouseButton and event.pressed:
+	var room = rooms[room_id]
+	if event is InputEventMouseMotion and room.player_id != -1:
+		card_position = event.position
+		card_name = player_names[room.player_id]
+	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == BUTTON_LEFT:
 			printt("Room clicked", room_id)
 			
 			var master_room = rooms[player_room]
-			var room = rooms[room_id]
+			
 			
 			if highlight_rooms.find(room) != -1:
 				place_player($Player, room_id)
@@ -237,3 +256,33 @@ func on_room_input_event(viewport, event, shape_idx, room_id):
 #				print("Adjacent")
 #			else:
 #				print("Not adjacent")
+
+func start(selected_player: String):
+	player_name = selected_player
+	var info = player_info[selected_player]
+	$Player.info = info
+
+func display_current_player():
+	display_player(player_name)
+
+func display_player(name):
+	var info = player_info[name]
+	$PlayerCard/Name.text = name
+	var stats = """
+	Move: {move}
+	Energy: {energy}
+	Skills:
+	Equipment:
+	"""
+	$PlayerCard/Stats.text = stats.format({"move": info.move, "energy": info.energy})
+	$PlayerCard/Avatar.set_animation(name)
+
+
+func on_player_mouse_entered():
+	$PlayerCard.position = card_position + Vector2(-330, 10)
+	display_player(card_name)
+	$PlayerCard.show()
+
+
+func on_player_mouse_exited():
+	$PlayerCard.hide()

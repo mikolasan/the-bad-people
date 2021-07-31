@@ -13,7 +13,8 @@ func show_select_player():
 	$SelectPlayer.show()
 	$Level.hide()
 
-func show_level():
+func show_level(selected_player: String):
 	$Menu.hide()
 	$SelectPlayer.hide()
+	$Level.start(selected_player)
 	$Level.show()

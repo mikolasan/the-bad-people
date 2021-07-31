@@ -18,6 +18,10 @@ config/name="The Bad People"
 run/main_scene="res://resources/Game.tscn"
 config/icon="res://icon.png"
 
+[autoload]
+
+Global="*res://sources/Global.gd"
+
 [display]
 
 window/size/width=1920
