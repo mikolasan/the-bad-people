@@ -27,6 +27,10 @@ Global="*res://sources/Global.gd"
 window/size/width=1920
 window/size/height=1080
 
+[editor_plugins]
+
+enabled=PoolStringArray( "res://addons/imjp94.yafsm/plugin.cfg" )
+
 [rendering]
 
 environment/default_environment="res://default_env.tres"

@@ -5,7 +5,7 @@
 [ext_resource path="res://resources/avatar4.atlastex" type="Texture" id=3]
 [ext_resource path="res://resources/avatar1.atlastex" type="Texture" id=4]
 [ext_resource path="res://resources/avatar2.atlastex" type="Texture" id=5]
-[ext_resource path="res://resources/avatar5.atlastex" type="Texture" id=6]
+[ext_resource path="res://resources/avatar14.atlastex" type="Texture" id=6]
 
 [resource]
 animations = [ {
@@ -19,14 +19,9 @@ animations = [ {
 "name": "White",
 "speed": 5.0
 }, {
-"frames": [ ExtResource( 5 ) ],
-"loop": true,
-"name": "Green",
-"speed": 5.0
-}, {
 "frames": [ ExtResource( 6 ) ],
 "loop": true,
-"name": "Red",
+"name": "Green",
 "speed": 5.0
 }, {
 "frames": [ ExtResource( 3 ) ],
@@ -36,11 +31,16 @@ animations = [ {
 }, {
 "frames": [ ExtResource( 1 ) ],
 "loop": true,
-"name": "Mustard",
+"name": "Blue",
 "speed": 5.0
 }, {
 "frames": [ ExtResource( 4 ) ],
 "loop": true,
-"name": "Blue",
+"name": "Mustard",
+"speed": 5.0
+}, {
+"frames": [ ExtResource( 5 ) ],
+"loop": true,
+"name": "Red",
 "speed": 5.0
 } ]

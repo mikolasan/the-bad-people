@@ -6,7 +6,7 @@ extends Polygon2D
 export(Color) var outline = Color(0,0,0) setget set_outline_color
 export(float) var width = 4.0 setget set_outline_width
 
-var player_id = -1
+var player_name
 
 func _draw():
 	var poly = get_polygon()
