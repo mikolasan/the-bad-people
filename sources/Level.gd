@@ -15,6 +15,7 @@ var player_names = player_info.keys()
 var current_player = 0
 var player_name
 onready var state_machine = get_node("GameStateMachine")
+var corridor = 5.0
 
 # https://godotengine.org/qa/75793/how-do-i-generate-a-polygon2d-from-within-a-script
 func make_room(x, y, width, height, color):
@@ -25,15 +26,16 @@ func make_room(x, y, width, height, color):
 	
 	var poly = Polygon2D.new()
 	poly.set_script(room_script)
-	var x1 = 0
-	var y1 = 0
+	var x1 = corridor
+	var y1 = corridor
 	poly.set_polygon(PoolVector2Array([
 		Vector2(x1, y1),
-		Vector2(x1 + width, y1),
-		Vector2(x1 + width, y1 + height),
-		Vector2(x1, y1 + height)
+		Vector2(x1 + width - 2.0 * corridor, y1),
+		Vector2(x1 + width - 2.0 * corridor, y1 + height - 2.0 * corridor),
+		Vector2(x1, y1 + height - 2 * corridor)
 	]))
 	poly.color = color
+	poly.room_id = rooms.size()
 	rooms.append(poly)
 	area.add_child(poly)
 
@@ -99,15 +101,15 @@ func find_adjacent_rooms(room_id):
 	var master_room = rooms[room_id]
 	var master_left = master_room.get_parent().position.x
 	var master_top = master_room.get_parent().position.y
-	var master_right = master_left + master_room.polygon[2].x
-	var master_bottom = master_top + master_room.polygon[2].y
+	var master_right = master_left + master_room.polygon[2].x + corridor
+	var master_bottom = master_top + master_room.polygon[2].y + corridor
 	for room in rooms:
 		if room == master_room:
 			continue
 		var left = room.get_parent().position.x
 		var top = room.get_parent().position.y
-		var right = left + room.polygon[2].x
-		var bottom = top + room.polygon[2].y
+		var right = left + room.polygon[2].x + corridor
+		var bottom = top + room.polygon[2].y + corridor
 		
 		var same_vertical = equal_floats(left, master_right) || equal_floats(right, master_left)
 		var same_horizontal = equal_floats(top, master_bottom) || equal_floats(bottom, master_top)
@@ -122,10 +124,66 @@ func find_adjacent_rooms(room_id):
 			adjacent_rooms.append(room)
 	return adjacent_rooms
 
+func add_corridors():
+	var bridges = {}
+	for room_id in range(rooms.size()):
+		var adjacent_rooms = find_adjacent_rooms(room_id)
+		var room_1 = rooms[room_id]
+		var left_1 = room_1.get_parent().position.x
+		var top_1 = room_1.get_parent().position.y
+		var right_1 = left_1 + room_1.polygon[2].x + corridor
+		var bottom_1 = top_1 + room_1.polygon[2].y + corridor
+		for room_2 in adjacent_rooms:
+			if room_2.room_id == room_id:
+				continue
+			if (bridges.has(str(room_2.room_id) + "-" + str(room_id))
+				|| bridges.has(str(room_id) + "-" + str(room_2.room_id))):
+				continue
+
+			var c = ColorRect.new()
+			
+			var left_2 = room_2.get_parent().position.x
+			var top_2 = room_2.get_parent().position.y
+			var right_2 = left_2 + room_2.polygon[2].x + corridor
+			var bottom_2 = top_2 + room_2.polygon[2].y + corridor
+			
+			var same_vertical = equal_floats(left_2, right_1) || equal_floats(right_2, left_1)
+			var same_horizontal = equal_floats(top_2, bottom_1) || equal_floats(bottom_2, top_1)
+			if same_vertical:
+				var left = min(right_1, right_2) - 10
+				var right = max(left_1, left_2) + 10
+				var top = max(top_1, top_2) + corridor
+				var bottom = min(bottom_1, bottom_2) - corridor
+				if bottom - top > 50:
+					var r = rng.randi_range(top, bottom - 50)
+					top = r
+					bottom = r + 50
+					
+				c.rect_position = Vector2(left, top)
+				c.rect_size = Vector2(right - left, bottom - top)
+			
+			elif same_horizontal:
+				var left = max(left_1, left_2) + corridor
+				var right = min(right_1, right_2) - corridor
+				if right - left > 50:
+					var r = rng.randi_range(left, right - 50)
+					left = r
+					right = r + 50
+				var top = min(bottom_1, bottom_2) - 10
+				var bottom = max(top_1, top_2) + 10
+				
+				c.rect_position = Vector2(left, top)
+				c.rect_size = Vector2(right - left, bottom - top)
+				
+			c.color = Color.gray
+			$Corridors.add_child(c)
+			bridges[str(room_id) + "-" + str(room_2.room_id)] = true
+
 var highlight_rooms = []
 
 func create_level():
 	mondrian(0, 0, 1920, 1080, 6)
+	add_corridors()
 
 func _find(arr: Array, f: FuncRef):
 	for v in arr:
